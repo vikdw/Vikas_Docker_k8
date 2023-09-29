@@ -1,0 +1,246 @@
+
+List of commands
+> kubectl delete all --all;
+> kubectl apply -f .
+> kubectl get all
+> kubectl get po -o wide 
+> kubectl get po
+> kubectl get svc
+> kubectl delete po <vote>
+> kubectl get rs
+> kubectl delete po <worker>
+> kubectl delete po <db> 
+> kubectl logs <worker>
+
+Observations:
+
+> All pods are created with apply command
+> Able to voting app web interface and results web interfaces through nodeport IP address with ports  31100 and 31101 respectively
+> able to do votion , vote cout is changing in real time without refreshing result page.
+> Deleted the voting pdd, still able to access voting App as we defined as deployment and replica set is 1 as Voting App is recreated with different instance id.
+> Deleted the Worker pod, still able to access voting App as its recreated. Vote count is same before and after worker pod deletion.
+> Deleted the Db pod, still able to access voting App. old Vote count is lost after db pod is deleted.
+   > worker and result pod restart observed.
+   > vote count is not increasing as db Pod is deleted
+   > vote count is set to zero
+   > worker and voting pod went to "CrashLoopBackOff" state, recovered after deleting both pods manually(both pods recreated by K8)
+
+> db PoD is stopped using command "kubectl scale deploy db --replicas=0". the pod went into terminating state and deleted from node. Vote count is zero
+> Votes are not increasing in browser even I vote from different windows as dB node is deleted.
+> Restarted db PoD using command "kubectl scale deploy db --replicas=1". Then after some time I see vote count is 2 which is previous count. It means when db PoD is stopped or terminated, results window does not vote count. After db PoD restarted only we can see vote count.
+
+Logs:-
+
+[root@ip-172-31-40-107 k8s-specifications]# kubectl apply -f .
+deployment.apps/db created
+service/db created
+deployment.apps/redis created
+service/redis created
+deployment.apps/result created
+service/result created
+deployment.apps/vote created
+service/vote created
+deployment.apps/worker created
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get all
+NAME                          READY   STATUS    RESTARTS   AGE
+pod/db-b54cd94f4-7d8cv        1/1     Running   0          24s
+pod/redis-868d64d78-qtc9z     1/1     Running   0          24s
+pod/result-5d57b59f4b-dssgb   1/1     Running   0          24s
+pod/vote-94849dc97-h857s      1/1     Running   0          24s
+pod/worker-dd46d7584-kndx2    1/1     Running   0          24s
+
+NAME             TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+service/db       ClusterIP   10.97.127.80     <none>        5432/TCP         24s
+service/redis    ClusterIP   10.96.179.218    <none>        6379/TCP         24s
+service/result   NodePort    10.105.253.152   <none>        5001:31101/TCP   24s
+service/vote     NodePort    10.98.116.253    <none>        5000:31100/TCP   24s
+
+NAME                     READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/db       1/1     1            1           24s
+deployment.apps/redis    1/1     1            1           24s
+deployment.apps/result   1/1     1            1           24s
+deployment.apps/vote     1/1     1            1           24s
+deployment.apps/worker   1/1     1            1           24s
+
+NAME                                DESIRED   CURRENT   READY   AGE
+replicaset.apps/db-b54cd94f4        1         1         1       24s
+replicaset.apps/redis-868d64d78     1         1         1       24s
+replicaset.apps/result-5d57b59f4b   1         1         1       24s
+replicaset.apps/vote-94849dc97      1         1         1       24s
+replicaset.apps/worker-dd46d7584    1         1         1       24s
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get pods -o wide
+NAME                      READY   STATUS    RESTARTS   AGE     IP                NODE                                               NOMINATED NODE   REA              DINESS GATES
+db-b54cd94f4-7d8cv        1/1     Running   0          3m30s   192.168.214.211   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <no              ne>
+redis-868d64d78-qtc9z     1/1     Running   0          3m30s   192.168.53.77     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <no              ne>
+result-5d57b59f4b-dssgb   1/1     Running   0          3m30s   192.168.214.212   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <no              ne>
+vote-94849dc97-h857s      1/1     Running   0          3m30s   192.168.53.78     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <no              ne>
+worker-dd46d7584-kndx2    1/1     Running   0          3m30s   192.168.214.213   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <no              ne>
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get pods -o wide
+NAME                      READY   STATUS    RESTARTS   AGE     IP                NODE                                               NOMINATED NODE   READINESS GATES
+db-b54cd94f4-7d8cv        1/1     Running   0          3m43s   192.168.214.211   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+redis-868d64d78-qtc9z     1/1     Running   0          3m43s   192.168.53.77     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+result-5d57b59f4b-dssgb   1/1     Running   0          3m43s   192.168.214.212   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+vote-94849dc97-h857s      1/1     Running   0          3m43s   192.168.53.78     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+worker-dd46d7584-kndx2    1/1     Running   0          3m43s   192.168.214.213   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]# kubectl delete po vote-94849dc97-h857s
+pod "vote-94849dc97-h857s" deleted
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get pods -o wide
+NAME                      READY   STATUS    RESTARTS   AGE   IP                NODE                                               NOMINATED NODE   READINESS GATES
+db-b54cd94f4-7d8cv        1/1     Running   0          18m   192.168.214.211   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+redis-868d64d78-qtc9z     1/1     Running   0          18m   192.168.53.77     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+result-5d57b59f4b-dssgb   1/1     Running   0          18m   192.168.214.212   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+vote-94849dc97-rnk6b      1/1     Running   0          13s   192.168.53.79     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+worker-dd46d7584-kndx2    1/1     Running   0          18m   192.168.214.213   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+[root@ip-172-31-40-107 k8s-specifications]# kubectl delete po worker-dd46d7584-kndx2
+pod "worker-dd46d7584-kndx2" deleted
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]# kubectl delete po db-b54cd94f4-7d8cv
+pod "db-b54cd94f4-7d8cv" deleted
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get pods -o wide
+NAME                      READY   STATUS    RESTARTS   AGE     IP                NODE                                               NOMINATED NODE   READINESS GATES
+db-b54cd94f4-99vbr        1/1     Running   0          49s     192.168.214.214   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+redis-868d64d78-qtc9z     1/1     Running   0          5h45m   192.168.53.77     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+result-5d57b59f4b-dssgb   1/1     Running   1          5h45m   192.168.214.212   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+vote-94849dc97-rnk6b      1/1     Running   0          5h27m   192.168.53.79     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+worker-dd46d7584-zjjqk    1/1     Running   1          5h26m   192.168.53.80     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]# kubectl delete po db-b54cd94f4-99vbr
+pod "db-b54cd94f4-99vbr" deleted
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get pods -o wide
+NAME                      READY   STATUS    RESTARTS   AGE     IP                NODE                                               NOMINATED NODE   READINESS GATES
+db-b54cd94f4-b6pqt        1/1     Running   0          2m6s    192.168.214.215   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+redis-868d64d78-qtc9z     1/1     Running   0          5h48m   192.168.53.77     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+result-5d57b59f4b-dssgb   1/1     Running   2          5h48m   192.168.214.212   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+vote-94849dc97-rnk6b      1/1     Running   0          5h30m   192.168.53.79     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+worker-dd46d7584-zjjqk    1/1     Running   2          5h29m   192.168.53.80     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+[root@ip-172-31-40-107 k8s-specifications]# kubectl delete po db-b54cd94f4-b6pqt
+pod "db-b54cd94f4-b6pqt" deleted
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get pods -o wide
+NAME                      READY   STATUS    RESTARTS   AGE     IP                NODE                                               NOMINATED NODE   READINESS GATES
+db-b54cd94f4-84cnc        1/1     Running   0          5m53s   192.168.214.216   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+redis-868d64d78-qtc9z     1/1     Running   0          5h56m   192.168.53.77     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+result-5d57b59f4b-dssgb   1/1     Running   3          5h56m   192.168.214.212   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+vote-94849dc97-rnk6b      1/1     Running   0          5h38m   192.168.53.79     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+worker-dd46d7584-zjjqk    1/1     Running   3          5h37m   192.168.53.80     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+[root@ip-172-31-40-107 k8s-specifications]# kubectl delete po db-b54cd94f4-84cnc
+pod "db-b54cd94f4-84cnc" deleted
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get pods -o wide
+NAME                      READY   STATUS             RESTARTS   AGE     IP                NODE                                               NOMINATED NODE   READINESS GATES
+db-b54cd94f4-fzt4q        1/1     Running            0          47s     192.168.214.217   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+redis-868d64d78-qtc9z     1/1     Running            0          5h57m   192.168.53.77     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+result-5d57b59f4b-dssgb   0/1     CrashLoopBackOff   3          5h57m   192.168.214.212   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+vote-94849dc97-rnk6b      1/1     Running            0          5h39m   192.168.53.79     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+worker-dd46d7584-zjjqk    0/1     CrashLoopBackOff   3          5h38m   192.168.53.80     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get pods -o wide
+NAME                      READY   STATUS             RESTARTS   AGE     IP                NODE                                               NOMINATED NODE   READINESS GATES
+db-b54cd94f4-fzt4q        1/1     Running            0          50s     192.168.214.217   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+redis-868d64d78-qtc9z     1/1     Running            0          5h57m   192.168.53.77     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+result-5d57b59f4b-dssgb   0/1     CrashLoopBackOff   3          5h57m   192.168.214.212   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+vote-94849dc97-rnk6b      1/1     Running            0          5h39m   192.168.53.79     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+worker-dd46d7584-zjjqk    0/1     CrashLoopBackOff   3          5h38m   192.168.53.80     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get pods -o wide
+NAME                      READY   STATUS             RESTARTS   AGE     IP                NODE                                               NOMINATED NODE   READINESS GATES
+db-b54cd94f4-fzt4q        1/1     Running            0          52s     192.168.214.217   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+redis-868d64d78-qtc9z     1/1     Running            0          5h57m   192.168.53.77     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+result-5d57b59f4b-dssgb   0/1     CrashLoopBackOff   3          5h57m   192.168.214.212   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+vote-94849dc97-rnk6b      1/1     Running            0          5h39m   192.168.53.79     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+worker-dd46d7584-zjjqk    0/1     CrashLoopBackOff   3          5h38m   192.168.53.80     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get pods -o wide
+NAME                      READY   STATUS             RESTARTS   AGE     IP                NODE                                               NOMINATED NODE   READINESS GATES
+db-b54cd94f4-fzt4q        1/1     Running            0          54s     192.168.214.217   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+redis-868d64d78-qtc9z     1/1     Running            0          5h57m   192.168.53.77     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+result-5d57b59f4b-dssgb   0/1     CrashLoopBackOff   3          5h57m   192.168.214.212   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+vote-94849dc97-rnk6b      1/1     Running            0          5h39m   192.168.53.79     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+worker-dd46d7584-zjjqk    0/1     CrashLoopBackOff   3          5h38m   192.168.53.80     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get pods -o wide
+NAME                      READY   STATUS             RESTARTS   AGE     IP                NODE                                               NOMINATED NODE   READINESS GATES
+db-b54cd94f4-fzt4q        1/1     Running            0          55s     192.168.214.217   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+redis-868d64d78-qtc9z     1/1     Running            0          5h57m   192.168.53.77     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+result-5d57b59f4b-dssgb   0/1     CrashLoopBackOff   3          5h57m   192.168.214.212   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+vote-94849dc97-rnk6b      1/1     Running            0          5h39m   192.168.53.79     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+worker-dd46d7584-zjjqk    0/1     CrashLoopBackOff   3          5h38m   192.168.53.80     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get pods -o wide
+NAME                      READY   STATUS             RESTARTS   AGE     IP                NODE                                               NOMINATED NODE   READINESS GATES
+db-b54cd94f4-fzt4q        1/1     Running            0          58s     192.168.214.217   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+redis-868d64d78-qtc9z     1/1     Running            0          5h57m   192.168.53.77     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+result-5d57b59f4b-dssgb   0/1     CrashLoopBackOff   3          5h57m   192.168.214.212   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+vote-94849dc97-rnk6b      1/1     Running            0          5h39m   192.168.53.79     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+worker-dd46d7584-zjjqk    0/1     CrashLoopBackOff   3          5h38m   192.168.53.80     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get pods -o wide
+NAME                      READY   STATUS             RESTARTS   AGE     IP                NODE                                               NOMINATED NODE   READINESS GATES
+db-b54cd94f4-fzt4q        1/1     Running            0          59s     192.168.214.217   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+redis-868d64d78-qtc9z     1/1     Running            0          5h57m   192.168.53.77     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+result-5d57b59f4b-dssgb   0/1     CrashLoopBackOff   3          5h57m   192.168.214.212   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+vote-94849dc97-rnk6b      1/1     Running            0          5h39m   192.168.53.79     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+worker-dd46d7584-zjjqk    0/1     CrashLoopBackOff   3          5h38m   192.168.53.80     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get pods -o wide
+NAME                      READY   STATUS             RESTARTS   AGE     IP                NODE                                               NOMINATED NODE   READINESS GATES
+db-b54cd94f4-fzt4q        1/1     Running            0          61s     192.168.214.217   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+redis-868d64d78-qtc9z     1/1     Running            0          5h57m   192.168.53.77     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+result-5d57b59f4b-dssgb   0/1     CrashLoopBackOff   3          5h57m   192.168.214.212   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+vote-94849dc97-rnk6b      1/1     Running            0          5h39m   192.168.53.79     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+worker-dd46d7584-zjjqk    0/1     CrashLoopBackOff   3          5h38m   192.168.53.80     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]# kubectl delete po result-5d57b59f4b-dssgb worker-dd46d7584-zjjqk
+pod "result-5d57b59f4b-dssgb" deleted
+pod "worker-dd46d7584-zjjqk" deleted
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get pods -o wide
+NAME                      READY   STATUS    RESTARTS   AGE     IP                NODE                                               NOMINATED NODE   READINESS GATES
+db-b54cd94f4-fzt4q        1/1     Running   0          104s    192.168.214.217   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+redis-868d64d78-qtc9z     1/1     Running   0          5h58m   192.168.53.77     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+result-5d57b59f4b-7g284   1/1     Running   0          5s      192.168.214.218   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+vote-94849dc97-rnk6b      1/1     Running   0          5h40m   192.168.53.79     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+worker-dd46d7584-fgs58    1/1     Running   0          5s      192.168.214.219   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]# ^C
+[root@ip-172-31-40-107 k8s-specifications]# kubectl delete po db-b54cd94f4-fzt4q
+pod "db-b54cd94f4-fzt4q" deleted
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]# kubectl scale deploy db --replicas=0"
+> ^C
+[root@ip-172-31-40-107 k8s-specifications]# kubectl scale deploy db  --replicas=0
+deployment.apps/db scaled
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get pods -o wide
+NAME                      READY   STATUS        RESTARTS   AGE     IP                NODE                                               NOMINATED NODE   READINESS GATES
+db-b54cd94f4-l4psh        1/1     Terminating   0          2m50s   192.168.53.81     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+redis-868d64d78-qtc9z     1/1     Running       0          6h6m    192.168.53.77     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+result-5d57b59f4b-7g284   1/1     Running       1          8m32s   192.168.214.218   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+vote-94849dc97-rnk6b      1/1     Running       0          5h49m   192.168.53.79     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+worker-dd46d7584-fgs58    1/1     Running       1          8m32s   192.168.214.219   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get pods -o wide
+NAME                      READY   STATUS    RESTARTS   AGE     IP                NODE                                               NOMINATED NODE   READINESS GATES
+redis-868d64d78-qtc9z     1/1     Running   0          6h12m   192.168.53.77     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+result-5d57b59f4b-7g284   1/1     Running   2          14m     192.168.214.218   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+vote-94849dc97-rnk6b      1/1     Running   0          5h54m   192.168.53.79     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+worker-dd46d7584-fgs58    1/1     Running   2          14m     192.168.214.219   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]#
+[root@ip-172-31-40-107 k8s-specifications]# kubectl scale deploy db --replicas=1
+deployment.apps/db scaled
+[root@ip-172-31-40-107 k8s-specifications]# kubectl get pods -o wide
+NAME                      READY   STATUS    RESTARTS   AGE     IP                NODE                                               NOMINATED NODE   READINESS GATES
+db-b54cd94f4-dmkk7        1/1     Running   0          3s      192.168.214.220   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+redis-868d64d78-qtc9z     1/1     Running   0          6h13m   192.168.53.77     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+result-5d57b59f4b-7g284   1/1     Running   2          14m     192.168.214.218   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+vote-94849dc97-rnk6b      1/1     Running   0          5h55m   192.168.53.79     ip-172-31-40-107.ap-southeast-1.compute.internal   <none>           <none>
+worker-dd46d7584-fgs58    1/1     Running   2          14m     192.168.214.219   ip-172-31-45-103.ap-southeast-1.compute.internal   <none>           <none>
+[root@ip-172-31-40-107 k8s-specifications]#
