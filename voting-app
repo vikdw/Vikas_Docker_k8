@@ -1,16 +1,35 @@
 
 List of commands
-> kubectl delete all --all;
-> kubectl apply -f .
-> kubectl get all
-> kubectl get po -o wide 
-> kubectl get po
-> kubectl get svc
-> kubectl delete po <vote>
-> kubectl get rs
-> kubectl delete po <worker>
-> kubectl delete po <db> 
-> kubectl logs <worker>
+    kubectl delete all --all
+    kubectl get pods -o wide
+    cd /root/example-voting-app/
+    ll
+    cd k8s-specifications/
+    kubectl apply -f .
+    kubectl get all
+    kubectl get pods -o wide
+    kubectl delete po vote-94849dc97-h857s
+    kubectl get pods -o wide
+    kubectl delete po worker-dd46d7584-kndx2
+    kubectl delete po db-b54cd94f4-7d8cv
+    kubectl get pods -o wide
+    kubectl delete po db-b54cd94f4-99vbr
+    kubectl get pods -o wide
+    kubectl delete po db-b54cd94f4-b6pqt
+    kubectl get pods -o wide
+    kubectl delete po db-b54cd94f4-84cnc
+    kubectl get pods -o wide
+    kubectl delete po result-5d57b59f4b-dssgb worker-dd46d7584-zjjqk
+    kubectl get pods -o wide
+    kubectl delete po db-b54cd94f4-fzt4q
+    kubectl scale deploy db --replicas=0"
+    kubectl scale deploy db  --replicas=0
+    kubectl get pods -o wide
+    kubectl scale deploy db --replicas=1
+    kubectl get pods -o wide
+    pwd
+    history
+
 
 Observations:
 
